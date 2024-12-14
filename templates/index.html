@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flooding Detection System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    /* General Styles */
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      background-color: #121212;
+      color: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1e1e2d;
+      border-radius: 12px;
+      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    .flex-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: space-between; /* Distribute space evenly */
+      align-items: stretch;
+    }
+
+    .card {
+      background: #2a2a3a;
+      border-radius: 8px;
+      padding: 20px;
+      flex: 1;
+      min-width: 400px;
+      max-width: 45%;
+      height: auto;
+      box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s, box-shadow 0.3s;
+      overflow: hidden; 
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .upload-area {
+      border: 2px dashed #555;
+      border-radius: 8px;
+      text-align: center;
+      padding: 10px;
+      cursor: pointer;
+      transition: border-color 0.3s;
+      position: relative;
+      width: 400px; /* Fixed width */
+      height: 300px; /* Fixed height */
+      overflow: hidden;
+      display: flex; /* Center content */
+      justify-content: center;
+      align-items: center;
+    }
+
+    .upload-area img,#uploaded-image, #segmentation-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .upload-area p {
+      position: relative;
+      z-index: 2;
+      padding: 40px;
+    }
+
+    .upload-area:hover {
+      border-color: #007bff;
+    }
+
+    select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+      background: #3a3a4a;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    select:hover, button:hover {
+      background: #4a4a5a;
+    }
+
+    canvas, img {
+      max-width: 400px; /* Match upload area width */
+      max-height: 300px; /* Match upload area height */
+      height: auto; /* Maintain aspect ratio */
+      border-radius: 8px;
+      margin: 0 auto;
+      box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .results {
+      width: 100%; /* Ensure it scales responsively */
+      overflow: auto; /* Maintain aspect ratio */
+      height: auto;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    .results p {
+      margin: 5px 0;
+    }
+
+    /* Delete button styles */
+    .delete-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: red;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 50%;
+      padding: 5px;
+      font-size: 14px;
+      width: 24px; /* Set a specific width */
+      height: 24px; /* Set a specific height */
+      display: none; /* Initially hidden */
+      z-index: 2;
+    }
+
+    .description {
+        font-size: 14px; /* Reduces the font size of the description */
+        line-height: 1.2; /* Adds spacing between lines for readability */
+        color: #eeecec; /* Sets a softer color for the text */
+        margin-top: 10px; /* Adds spacing above the description */
+        max-width: 900px; /* Constrains the width of the description text */
+        margin-left: auto;
+        margin-right: auto; /* Centers the description text */
+        text-align: left; /* Aligns the text to the left */
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 style="margin: 10px 0;text-align: center;">Smart Flooding Detection System</h2>
+    <p style="font-size: 13px; margin: 5px 0; color: #66d9ef;text-align: center;">CPCS432 Final Project</p>
+    <p class="description">Our system consists of three powerful models, and this is how each works: The Classification model identifies whether an image contains flooding. The Detection model locates both humans and vehicles in flood scenarios. The Segmentation model highlights flooded areas and estimates water levels for each person in the image, categorizing them into nine distinct levels.</p>
+    <div class="flex-container">
+      <!-- Upload Section -->
+      <div class="card">
+        <div class="upload-area" id="upload-area">
+          <button class="delete-button" id="delete-btn">&times;</button>
+          <img id="uploaded-image" alt="Uploaded Image">
+          <p class="placeholder-text">Drag and drop an image here or click to upload</p>
+          <input type="file" id="file-input" accept="image/*" style="display: none;">
+        </div>
+        <select id="model-select">
+          <option value="classification">Classification</option>
+          <option value="detection">Object Detection</option>
+          <option value="segmentation">Segmentation</option>
+        </select>
+        <button id="submit-btn">Process Image</button>
+      </div>
+      
+      <!-- Results Section -->
+      <div class="card">
+        <h3>Results</h3>
+        <div class="results" id="results"></div>
+        <canvas id="canvas" style="display: none;"></canvas>
+        <img id="segmentation-img" style="display: none;" alt="Segmentation">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    const uploadedImage = document.getElementById('uploaded-image');
+    const placeholderText = document.querySelector('.placeholder-text');
+    const modelSelect = document.getElementById('model-select');
+    const submitBtn = document.getElementById('submit-btn');
+    const results = document.getElementById('results');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const segmentationImg = document.getElementById('segmentation-img');
+    let uploadedFile;
+    const deleteBtn = document.getElementById('delete-btn');
+    
+
+    deleteBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      uploadedFile = null;
+      uploadedImage.style.display = 'none';  // Hide the image
+      deleteBtn.style.display = 'none';     // Hide the delete button
+      placeholderText.style.display = 'block';  // Show the placeholder text again
+      fileInput.value = '';
+    // Clear previous results
+      results.innerHTML = "";
+      canvas.style.display = 'none';
+      segmentationImg.style.display = 'none';  // Hide segmentation image
+    });
+  
+    // Trigger file input click when upload area is clicked
+    uploadArea.addEventListener('click', () => {
+          if (!uploadedFile) { // Only trigger file input if no image is uploaded
+                fileInput.click();}
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      uploadedFile = e.target.files[0];
+      if (uploadedFile) {
+          // Clear previous results
+            results.innerHTML = "";
+            canvas.style.display = 'none';
+            segmentationImg.style.display = 'none';  // Hide previous segmentation image
+            displayUploadedFile(uploadedFile);}
+    });
+
+    uploadArea.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      uploadArea.style.borderColor = "#007bff";
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.borderColor = "#555";
+    });
+
+    uploadArea.addEventListener('drop', (event) => {
+      event.preventDefault();
+      uploadArea.style.borderColor = "#555";
+      const file = event.dataTransfer.files[0];
+      if (file) {
+          uploadedFile = file; // Update the global `uploadedFile` variable
+          resetDisplay(); // Clear previous results
+          displayUploadedFile(uploadedFile);
+        }
+    });
+
+    function displayUploadedFile(file) {
+      if (file && file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          // Hide placeholder text and show uploaded image
+          placeholderText.style.display = "none";
+          uploadedImage.src = e.target.result;
+          uploadedImage.style.display = "block";
+          deleteBtn.style.display = "block"; 
+
+          // Reset styles to match drag-and-drop and direct upload
+          uploadedImage.style.width = "100%";
+          uploadedImage.style.height = "100%";
+          uploadedImage.style.objectFit = "contain";
+        };
+        reader.readAsDataURL(file);
+      } else {
+        alert("Please upload a valid image file.");
+      }
+    }
+
+    function updateClassificationResult(result, file) {
+      // Show label and confidence in results section
+      results.innerHTML = `
+       <p>Label: ${result.label}</p><p>Confidence: ${result.confidence.toFixed(2)}</p>`;
+
+      // Display the uploaded image
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.onload = () => {
+          canvas.style.display = 'block';
+          canvas.width = 400; // Fixed width
+          canvas.height = (img.height / img.width) * 400; // Proportional height
+
+          // Clear canvas and draw the image
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = e.target.result;
+      };
+
+      reader.readAsDataURL(file);
+       // Ensure segmentation image is hidden
+      segmentationImg.style.display = 'none';
+    }
+
+    function updateCanvas(imageUrl) {
+       const img = new Image();
+       img.onload = () => {
+          canvas.style.display = 'block';
+          canvas.width = 400; // Fixed width
+          canvas.height = (img.height / img.width) * 400; // Proportional height
+
+          // Clear canvas and draw the image
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = `${imageUrl}?t=${new Date().getTime()}`; // Cache buster
+        // Ensure segmentation image is hidden
+        segmentationImg.style.display = 'none';
+    }
+
+    function updateSegmentationImage(segmentationUrl, classes) {
+        segmentationImg.style.display = 'block';
+        segmentationImg.src = `${segmentationUrl}?t=${new Date().getTime()}`; // Cache buster
+        results.innerHTML = classes; // Display classes
+
+        // Ensure canvas is hidden
+        canvas.style.display = 'none';
+        }
+
+    function resetDisplay() {
+        results.innerHTML = ""; // Clear previous results
+        canvas.style.display = 'none'; // Hide canvas
+        segmentationImg.style.display = 'none'; // Hide segmentation image
+        ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas content
+    }
+
+    // Function to display the original uploaded image
+    function displayOriginalImage(file) {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.onload = () => {
+          canvas.style.display = 'block';
+          canvas.width = img.width;
+          canvas.height = img.height;
+
+          // Draw the original image on the canvas
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+      segmentationImg.style.display = 'none';
+    }
+
+
+    submitBtn.addEventListener('click', () => {
+      if (!uploadedFile) {
+        alert('Please upload an image!');
+        return;
+      }
+ 
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
+      formData.append('model', modelSelect.value);
+
+      resetDisplay(); // Clear old results
+
+      fetch('/upload', { method: 'POST', body: formData })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.type === 'classification') {
+            updateClassificationResult(data.result, uploadedFile);
+          } else if (data.type === 'detection') {
+            updateCanvas(data.image_url);
+          } else if (data.type === 'segmentation') {
+            if (data.error) {
+                // Handle the case where there is an error key
+                results.innerHTML = `<p>${data.error}</p>`;
+                displayOriginalImage(uploadedFile);
+              } else {
+                updateSegmentationImage(data.segmentation_url, data.classes);}
+              }
+        })
+        .catch((err) => console.error('Error:', err));
+    });
+  </script>
+</body>
+</html>
+
+
+
